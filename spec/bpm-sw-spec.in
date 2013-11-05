@@ -1,0 +1,2126 @@
+\input texinfo    @c -*-texinfo-*-
+%
+% bpm-sw-spec.in - main file for the documentation
+%
+%%%%
+
+%------------------------------------------------------------------------------
+%
+%                         NOTE FOR THE UNAWARE USER
+%                         =========================
+%
+%    This file is a texinfo source. It isn't the binary file of some strange
+%    editor of mine. If you want ASCII, you should "make fine-delay.txt".
+%
+%------------------------------------------------------------------------------
+
+%
+% This is not a conventional info file...
+% I use three extra features:
+%   - The '%' as a comment marker, if at beginning of line ("\%" -> "%")
+%   - leading blanks are allowed (this is something I can't live without)
+%   - braces are automatically escaped when they appear in example blocks
+%
+
+@comment %**start of header
+
+@documentlanguage en
+@documentencoding ISO-8859-1
+@setfilename bpm-sw-spec.info
+@settitle bpm-sw-spec
+@iftex
+@afourpaper
+@end iftex
+@c @paragraphindent asis
+@c @exampleindent asis
+@c %**end of header
+
+@c @setchapternewpage off
+
+@c ##########################################################################
+
+@c This set of macros were taken from http://www.delorie.com/pcb/docs/gs/
+@c project
+
+@comment wrap terms at their definition
+@ifhtml
+@macro tdef{TERM}
+@html
+<a name="\TERM\">\TERM\</a>@end html
+@end macro
+@end ifhtml
+
+@iftex
+@tex
+\gdef\tdef#1{%
+  \ifpdf
+    \pdfdest name{#1} xyz
+    \pdfoutline goto name{#1} count 0 {#1}
+  \fi
+  #1%
+}
+@end tex
+@end iftex
+
+@ifnottex
+@ifnothtml
+@macro tdef{TERM}
+\TERM\
+@end macro
+@end ifnothtml
+@end ifnottex
+
+@comment wrap terms to cross reference
+@ifhtml
+@macro tref{TERM}
+@html
+<a href="#\TERM\">\TERM\</a>@end html
+@end macro
+@macro trefl{TERM,LINK}
+@html
+<a href="#\LINK\">\TERM\</a>@end html
+@end macro
+@end ifhtml
+
+@ifnothtml
+@macro tref{TERM}
+\TERM\
+@end macro
+@macro trefl{TERM,LINK}
+\TERM\
+@end macro
+@end ifnothtml
+
+@comment image legend
+@macro iml{ITXT}
+@center @b{\ITXT\}
+@end macro
+
+@c ##########################################################################
+
+@set update-month May 2013
+@set doc-version Draft v0.1
+@set tagname bpm-sw-spec-v0.1
+@c WARNING: in @example I Can't use @value{tagname}, so please look for this
+@c string when updating the document.
+@finalout
+
+@titlepage
+@title BPM Firmware and Software Specification
+@subtitle @value{doc-version}
+@subtitle @value{update-month}
+@subtitle BPM firmware and software specification document
+@author CNPEM-LNLS DIG / Lucas Russo
+@end titlepage
+
+@iftex
+@headings off
+@everyheading @thischapter @| @| @thispage
+@everyfooting @| @| @value{doc-version}
+@end iftex
+
+@c @headings single
+
+@c ##########################################################################
+@iftex
+@contents
+@end iftex
+
+@c ##########################################################################
+@c @include my-bib-macros.texi
+@c @mybibuselist{References}
+
+@c ##########################################################################
+@node Top
+@top Introduction
+
+This is the specfication document for the BPM firmware and software in
+development on @url{http://www.ohwr.org/projects/bpm-sw}. This is meant to serve
+as a reference guide on firmware FPGA and software developments. Also, it clarifies
+the necessary functionality of the project.
+
+@c ##########################################################################
+@node Glossary
+@chapter Glossary
+
+@table @dfn
+
+@item @tdef{AMC}
+    Advanced Mezzanine Card.
+
+@item @tdef{block}
+@itemx @tdef{core}
+@itemx @tdef{FPGA core}
+    A logical boundary between parts of a system. It is usually referred to a
+    well-defined subsystem wich have different funcionalities in the context of
+    @tref{FPGA}.
+
+@item @tdef{BPF}
+    Band pass filter. It is used to reject out-of-band signals.
+
+@item @tdef{BPM}
+    Beam Position Monitor.
+
+@item @tdef{channel}
+    A set of signals with a common or related meaning, such as a data channel,
+    representing a stream of data words originating from a @tref{source} and
+    consumed at a @tref{sink}.
+
+@item @tdef{data source}
+@itemx @tdef{source}
+    Place in which data is generated.
+
+@item @tdef{data sink}
+@itemx @tdef{sink}
+    Place in which data is consumed.
+
+@item @tdef{DBE}
+    Digital Back-End.
+
+@item @tdef{deliverable}
+    An entity that can have its scope and development time defined, such as:
+    a FPGA firmware core, a software library, a manual, a specification.
+
+@item @tdef{EBPM}
+    Beam Position Monitor Eletronics. Refers to the set of eletronics necessary
+    to measure the beam position.
+
+@item @tdef{EBPM node}
+@item @tdef{node}
+    Refers to a single @tref{EBPM} processing element. Each one of these receives
+    4 input RF signals and is responsible for calculating the beam position X, Y
+    and Q at an specific point in the @tref{machine}.
+
+@item @tdef{EEPROM}
+    Electrically Erasable Programmable Read-Only Memory. It is a type of non-volatile
+    memory used to store small amounts of data, such as calibration and information
+    data.
+
+@item @tdef{FMC}
+    FPGA Mezzanine Card.
+
+@item @tdef{FOFB}
+    Fast Orbit Feedback. A dedicated system responsible for correcting
+    beam disturbances up to hundreds of Hertz.
+
+@item @tdef{FPGA}
+    Field-Programmable Gate Array.
+
+@item @tdef{HDL}
+    Hardware Description Language.
+
+@item @tdef{Host}
+    Regular Computer, composed of a processor, memory, I/O capable of interfacing
+    multiple @tref{AFC} boards. Typically the Host controls and request data acquisition
+    to the AFC boards.
+
+@item @tdef{FMC HPC}
+    FPGA Mezzanine Card with High Pin Count connector. This type of FMC has
+    a connector with 400 pins.
+
+@item @tdef{FMC LPC}
+    FPGA Mezzanine Card with Low Pin Count connector. This type of FMC has
+    a connector with 200 pins.
+
+@item @tdef{group delay}
+    Time delay introduced by a system to an incoming signal.
+
+@item @tdef{IP}
+    Intellectual Property. Commonly used along with @tref{core} meaning the same
+    as @tref{block}, @tref{core} or @tref{FPGA core}.
+
+@item @tdef{LNLS}
+    Laborat@'orio Nacional de Luz S@'incrotron (Brazilian Synchrotron Light Laboratory).
+
+@item @tdef{machine}
+    Refers, in the macro sense, to all systems supporting the synchrotron light
+    generation and its functionalities.
+
+@item @tdef{MGT}
+    Multi-Gigabit Transceiver. A serial transmitter/receiver capable of driving data
+    at gigabit speeds.
+
+@item @tdef{MicroTCA}
+    Micro Telecommunications Computing Architecture.
+
+@item @tdef{MicroTCA.4}
+    MicroTCA Enhancements for Rear I/O and Precision Timing.
+
+@item @tdef{M-LVDS}
+    Multipoint Low Voltage Differential Signaling.
+
+@item @tdef{PICMG}
+    PCI Industrial Computer Manufacturers Group.
+
+@item @tdef{PPS}
+    Pulse Per Second. Signal accurately repeating once per second with low duty cycle.
+    Commonly used for timekeeping purposes.
+
+@item @tdef{RFFE}
+    RF Front-End. Analog eletronic board aimed at conditioning an RF signal to
+    a specific purpose.
+
+@item @tdef{SBC}
+    Single-Board Computer. A complete hardware solution in a single board, composed
+    of a processor, memory and I/O capabilities.
+
+@item @tdef{SoC}
+    System On Chip. A single integrated circuit composed of a complete computer solution
+    and other eletronic systems, such as: SPI, I2C, CAN, Flash memory, JTAG, timers,
+    PWM controllers.
+
+@item @tdef{Wishbone}
+    An interconnection protocol between IP cores, defining a standard way to
+    exchange data. Full specification is available at
+    @url{http://cdn.opencores.org/downloads/wbspec_b4.pdf}.
+
+@item @tdef{Wishbone Streaming Interface}
+    Wishbone Interface with streaming capabilities with backpressure developed at
+    CERN. Full specification is available by the name of WR Fabric Interface in
+    @url{http://www.ohwr.org/documents/80} and in the BPM-SW repositories.
+
+@item @tdef{word}
+    Common granularity of a set of meaningful signals or pins in a determined
+    context. For example, a word for the original RISC MIPS processor was
+    defined as 32-bit and later extended to 64-bit.
+
+@end table
+
+@c ##########################################################################
+@node Project Description
+@chapter Project Description
+
+The Brazilian Synchrotron Light Laboratory (LNLS) is currently designing a
+third-generation 3 GeV low emittance synchrotron light source in Campinas,
+Brazil, called Sirius, with first beam due to the second quarter of 2016.
+The main parameters of the machine are sumarized in @ref{tab:sirius_param_v2}.
+
+This table is based on the outdated parameter list v200. Waiting for the parameter
+list v403.
+
+@float Table,tab:sirius_param_v2
+@multitable @columnfractions .45 .18 .15
+@headitem Parameter             @tab      Value     @tab      Unit
+@item Beam energy               @tab      @math{3.0}        @tab        @math{GeV}
+@item Injection energy (top-up) @tab      @math{3.0}        @tab        @math{GeV}
+@item Beam current              @tab      @math{500}        @tab        @math{mA}
+@item RF frequency (@math{f_{rf}})
+                                @tab      @math{499.795}    @tab        @math{MHz}
+@item Harmonic number (@math{h})
+                                @tab      @math{864}        @tab        -
+@item Natural bunch length      @tab      @math{8.8}        @tab        @math{ps}
+@item Beam emittance without
+        IDs (horizontal)        @tab      @math{0.28}       @tab        @math{nm.rad}
+@item Beam emittance without
+        IDs (vertical)          @tab      @math{2.8}        @tab         @math{pm.rad}
+@c @item Beam size on insertion
+@c      devices @ 0.5% coupling
+@c      (horizontal X vertical)   @tab   139.6-195.9
+@c                                        x 2.6-5.6           @tab        @math{\mu m}
+@item Circumference (storage ring)
+                                @tab    @math{518.250}      @tab        @math{m}
+@end multitable
+@caption{Sirius parameters}
+@end float
+
+@c ==========================================================================
+@node EBPM Overview
+@section EBPM Overview
+
+In the context of the Sirius project, the Beam Diagnostics Group (DIG) of LNLS
+has been called to develop a beam position monitoring eletronics system (EBPM)
+which must provide electron beam position real-time monitoring, buffered data readouts,
+fast orbit feedback capabilities and advanced beam diagnostics tools for the
+new accelerator's injector and storage ring. This project is primarily intended
+to deliver a BPM system for the Sirius machine. Nevertheless, it is made open
+for the particle accelerators community and grand public for design reuse and
+collaborative development.
+
+@ref{fig:bpm_topology} depicts the topology of the EBPM system around the machine.
+
+@float Figure,fig:bpm_topology
+@center @image{img/bpm_topology, 10cm, , BPM Topology, png}
+@caption{BPM Topology}
+@end float
+@sp 1
+
+The BPM electronics is decomposed into 3 main subsystems: RF front-end, ADC
+board and digital back-end.
+
+@c ==========================================================================
+@node EBPM Description
+@section EBPM Description
+
+The RF front-end is designed for button BPM pick-ups and must allow 50 @math{dB} dynamic
+range with maximum gain of 60 @math{dB} (0 to 5 @math{dBm} output). Bandpass filtering must
+45 @math{MHz} bandwidth around the 500 MHz beam's main frequency, with 80 @math{dB} attenuation
+in the stop band.
+
+The ADC board is a FMC mezzanine fully compliant to ANSI/VITA 57.1, providing
+4-channel 16-bit 130 @math{MSPS} (LTC2208IUP) with 200 @math{MHz} bandwidth around 500 @math{MHz}.
+Clocking can be phase-locked to external reference or direct clock inputs.
+Input/output triggers are also present. It is expected to achieve above 10 bits
+ENOB and above 80 @math{dBFS} SFDR for 500 @math{MHz}.
+
+The DBE is a bused system which integrates in a single enclosure BPM processing
+boards (beam position sensor data processing, data acquisition, advanced diagnostics),
+FOFB processing boards (feedback control) and a single board computer (control
+system interface). The FPGA boards are connected to the single board computer
+via PCIe link. The backplane provides power, JTAG chain access, PCIe switch and
+point-to-point connection (multigigabit serial links, GPIO, triggers, clocks)
+between the carriers' FPGAs.
+
+@ref{fig:bpm_overview} depicts the aforementioned decomposition.
+
+@float Figure,fig:bpm_overview
+@center @image{img/bpm_overview, 16cm, , BPM Overview, png}
+@caption{BPM Overview}
+@end float
+@sp 1
+
+@c ##########################################################################
+@node Project Information and Repositories
+@chapter Project Information and Repositories
+
+The project is hosted in the following places:
+
+@c --------------------------------------------------------------------------
+
+@noindent @b{Project Information:}
+@table @r
+@item BPM
+    @url{http://www.ohwr.org/projects/bpm}
+
+    Top project page for general BPM information. It also hosts the subprojects
+    RFFE (RF Front-End), FMC ADC (ADC boards) and DBE (Digital Back-End) platform.
+    The later is a microTCA system composed of a commercial crate, AMC CPU (PowerPC)
+    and MCH (MicroController Hub, as required by the microTCA standard). Also, a
+    custom, fully-compliant microTCA board named AFC (AMC FMC Carrier) is hosted
+    in a repository mentioned below.
+@end table
+
+@c --------------------------------------------------------------------------
+
+@noindent @b{Hardware Developments:}
+
+@table @r
+@item RFFE
+    @url{http://www.ohwr.org/projects/bpm-rffe}
+
+    Top project page for the RFFE hardware development.
+
+@item
+    @code{git://ohwr.org/bpm/bpm-rffe}
+@itemx
+    @code{git@@ohwr.org:bpm/bpm-rffe.git}
+
+    Git repository for the RFFE hardware development.
+@end table
+
+@c --------------------------------------------------------------------------
+
+@table @r
+@item FMC ADC 130MSPS
+    @url{http://www.ohwr.org/projects/fmc-adc-130m-16b-4cha}
+
+    Top project page for the FMC ADC 130MSPS hardware development.
+
+@item
+    @code{git://ohwr.org/fmc-projects/fmc-adc-130m-16b-4cha}
+@itemx
+    @code{git@@ohwr.org:fmc-projects/fmc-adc-130m-16b-4cha.git}
+
+    Git repository for the FMC ADC 130MSPS hardware development.
+@end table
+
+@c --------------------------------------------------------------------------
+
+@table @r
+@item FMC ADC 250MSPS
+    @url{http://www.ohwr.org/projects/fmc-adc-250m-16b-4cha}
+
+    Top project page for the FMC ADC 250MSPS hardware development.
+
+@item
+    @code{git://ohwr.org/fmc-projects/fmc-adc-250m-16b-4cha}
+@itemx
+    @code{git@@ohwr.org:fmc-projects/fmc-adc-250m-16b-4cha.git}
+
+    Git repository for the FMC ADC 250MSPS hardware development.
+@end table
+
+@c --------------------------------------------------------------------------
+
+@table @r
+@item AFC
+    @url{http://www.ohwr.org/projects/afc}
+
+    Top project page for the AFC (part of the Digital Back-End) hardware
+    development.
+
+@item
+    @code{git://ohwr.org/fmc-projects/afc}
+@itemx
+    @code{git@@ohwr.org:fmc-projects/afc.git}
+
+    Git repository for the AFC hardware development.
+@end table
+
+@c --------------------------------------------------------------------------
+
+@noindent @b{Firmware and Software Developments:}
+
+@table @r
+@item BPM-SW
+    @url{http://www.ohwr.org/projects/bpm-sw}
+
+    Top project page for the BPM firmware and software
+
+@item
+    @code{git://ohwr.org/fmc-projects/afc}
+@itemx
+    @code{git@@ohwr.org:fmc-projects/afc.git}
+
+    Git repository for the BPM firmware and software development.
+@end table
+
+@c ##########################################################################
+@node Support Projects and Repositories
+@chapter Support Projects and Repositories
+
+In order to provide a more structured development workflow and diminish rework and
+redevelopments a set of support projects are employed. Also, it is highly advisable
+to adhere to the HDL code style and standards.
+
+These projects are hosted in the following places:
+
+@c --------------------------------------------------------------------------
+
+@noindent @sc{Tools:}
+
+@table @r
+@item @b{Wishbone Slave Generator}
+    @url{http://www.ohwr.org/projects/wishbone-gen}
+
+    Top project page for the Wishbone Slave Generator information.
+
+@item
+    @code{git://ohwr.org/hdl-core-lib/wishbone-gen.git}
+
+    Git repository for the Wishbone Slave Generator project.
+
+@item
+    This project provides a mean of easilly interface a custom module to the Wishbone
+    standard. It exports a simple C-like description language to the user and
+    produces an interface VHDL/Verilog core, which connects to a Wishbone bus in one side
+    and provides ports for accessing memory mapped registers, FIFOs and RAMs
+    on the other (i.e., core) side. Also, it generates HTML and Texinfo documentation,
+    Verilog and C headers register definitions.
+
+    It is highly advisable to use this project in order to generate Wishbone interfaces.
+@end table
+
+@c --------------------------------------------------------------------------
+
+@table @r
+@item @b{Hdlmake}
+    @url{http://www.ohwr.org/projects/hdl-make}
+
+    Top project page for the Hdlmake project information.
+
+@item
+    @code{git://ohwr.org/misc/hdl-make.git}
+
+    Git repository for the Hdlmake project.
+
+@item
+    This project is a tool for generating multi-purpose makefiles for FPGA projects,
+    as stated on the main project webpage. It is possible to generate makefiles
+    capable of fetching modules from repositories, dependency control over VHDL/
+    Verilog files, simulating designs with ModelSim, ISim (planned) and Icarus
+    Verilog (planned), synthesizing projects with Xilinx (i.e., ISE) or Altera
+    (i.e., Quartus), remote-synthesis, among other features.
+
+    A more complete documentation and the available features can be found at
+    @url{http://www.ohwr.org/projects/hdl-make/wiki}.
+
+    It is highly advisable to use this project in order to adhere to the projects
+    standards.
+@end table
+
+@c --------------------------------------------------------------------------
+
+@noindent @sc{FPGA firmware support projects:}
+
+@table @r
+@item @b{General Cores}
+    @url{http://www.ohwr.org/projects/general-cores}
+
+    Top project page for the General Cores project information.
+
+@item
+    @code{git://ohwr.org/hdl-core-lib/wishbone-gen.git}
+
+    Git repository for the General Cores project.
+
+@item
+    This project comprises a collection of platform-independent cores for HDL firmware
+    developments, such as memories, synchronizer circuits, communication protocols
+    (e.g., SPI, I2C, One-Wire), among others.
+
+    It is highly advisable to use the available cores for release code, as they are actively
+    mantained and used by many other projects.
+@end table
+
+@c --------------------------------------------------------------------------
+
+@table @r
+@item @b{FPGA Configuration Space}
+    @url{http://www.ohwr.org/projects/fpga-config-space}
+
+    Top project page for the FPGA Configuration Space project information.
+
+@item
+    @code{git://ohwr.org/hdl-core-lib/fpga-config-space.git}
+
+    Git repository for the FPGA Configuration Space project.
+
+@item
+    This project defines data structures, to be embedded in the FPGA memory address
+    space, to enumerate the devices that have been synthetized in the current design.
+    The same structure is also used as a simple flash file system,  AKA Self-Describing
+    Bus (SDB) Specification for Logic Cores. The layout is simple enough to be parsed
+    both by the host and by the internal soft-core, if any. The official specification
+    can be found here @code{http://www.ohwr.org/attachments/download/2006/sdb-1.1.pdf}
+
+    It is highly advisable to use the the structures defined in this project as
+    it provides a mean of embedding meta-information into the FPGA project. One
+    projects may be used as a ground base for using the FPGA configuration space
+    project, as well as an actual use of the General-cores project cores: White-Rabbit
+    Core Collection. It is described below.
+@end table
+
+@c --------------------------------------------------------------------------
+
+@table @r
+@item @b{Etherbone Core}
+    @url{http://www.ohwr.org/projects/etherbone-core}
+
+    Top project page for the Etherbone Core project information.
+
+@item
+    @code{git://ohwr.org/hdl-core-lib/etherbone-core.git}
+
+    Git repository for the Etherbone Core project.
+
+@item
+    Etherbone is an FPGA-core that connects Ethernet to internal on-chip Wishbone
+    buses permitting any core to talk to any other across Ethernet.
+
+    It can also communicate between software and hardware implementations of the
+    Etherbone protocol. In the moment of this writing it was available: FPGA slave
+    core to receive Etherbone requests, software master to send Etherbone requests
+    and FPGA master core to send Etherbone requests (work in progress).
+
+@end table
+
+@c --------------------------------------------------------------------------
+
+@table @r
+@item @b{White-Rabbit Core Collection}
+    @url{http://www.ohwr.org/projects/wr-cores}
+
+    Top project page for the White-Rabbit Core Collection project information.
+
+@item
+    @code{git://ohwr.org/hdl-core-lib/wr-cores.git}
+
+    Git repository for the White-Rabbit Core Collection information.
+
+@item
+    This project is an implementation of a VHDL library containing the VHDL modules
+    commonly used in a White Rabbit based network. This is aminly referenced here
+    as an use case of the cores and structures defined in General Cores and FPGA
+    Configuration Space projects.
+@end table
+
+@c --------------------------------------------------------------------------
+
+@noindent @sc{Software support projects:}
+
+@table @r
+@item @b{ZIO}
+    @url{http://www.ohwr.org/projects/zio}
+
+    Top project page for the ZIO project information.
+
+@item
+    @code{git://ohwr.org/misc/zio.git}
+
+    Git repository for the ZIO project.
+
+@item
+    This project is a framework for developing Linux device drivers aimed
+    at supporting controls and data acquisition hardware.
+
+@end table
+
+@table @r
+@item @b{FMC bus}
+    @url{http://www.ohwr.org/projects/fmc-bus}
+
+    Top project page for the FMC bus project information.
+
+@item
+    @code{git://ohwr.org/misc/zio.git}
+
+    Git repository for the FMC bus project.
+
+@item
+    This project implements a Linux kernel bus named @quotedblleft{}fmc@quotedblright{}.
+    This allows to deal with FMC mezzanines in a carrier-independent way.
+
+@end table
+
+
+@c --------------------------------------------------------------------------
+
+@noindent @sc{Development instructions:}
+
+@table @r
+@item @b{Repository Layout}
+    The project repository layout should follow the conventions outlined below.
+    This was based on the @code{Development Instructions} released by
+    CERN and is currently in use by @code{bpm-sw} repository.
+
+    @c @cartouche
+    @verbatim
+
+    Folder Hierarchy organization:
+
+    *
+    |
+    |-- hdl:
+    |    |   HDL (Verilog/VHDL) cores related to the BPM.
+    |    |
+    |    |-- ip_cores:
+    |    |    |   Third party reusable modules, primarily
+    |    |    |      Open hardware modules (http://www.ohwr.org).
+    |    |    |
+    |    |    |-- etherbone-core:
+    |    |    |       Connects two Wishbone buses, either a true
+    |    |    |         hardware bus or emulated software bus,
+    |    |    |         through Ethernet.
+    |    |    |-- general-cores (fork from original project):
+    |    |            General reusable modules.
+    |    |
+    |    |-- modules:
+    |    |    |   Modules specific to BPM hardware.
+    |    |    |
+    |    |    |-- custom_common:
+    |    |    |       Common (reusable) modules to BPM hardware and
+    |    |    |         possibly to other designs.
+    |    |    |-- custom_wishbone:
+    |    |            Wishbone modules to BPM hardware.
+    |    |
+    |    |-- platform:
+    |    |        Platform-specific code, such as Xilinx Chipscope
+    |    |          wrappers.
+    |    |
+    |    |-- sim:
+    |    |        Generic simulation files, reusable Bus Functional
+    |    |          Modules (BFMs), constants definitions.
+    |    |
+    |    |-- syn:
+    |    |        Synthesis specific files (user constraints files and
+    |    |          top design specification).
+    |    |
+    |    |-- testbench:
+    |    |        Testbenches for modules and top level designs. May use
+    |    |          modules defined elsewhere (specific within the "sim"
+    |    |          directory).
+    |    |
+    |    |-- top:
+    |             Top design modules.
+    |
+    |-- sw:
+    |    |    Software related to interfacing the BPM carrier board with
+    |    |      a PC via PCIe.
+    |    |
+    |    |-- drivers:
+    |    |        Linux Kernel code for device drivers.
+    |    |
+    |    |-- include:
+    |    |        Header files for device structures and definitions.
+    |    |
+    |    |-- lib:
+    |             Utilities and API functions exported by the drivers.
+    |
+    |-- embedded-sw (based on the original project by Alessandrio Rubini
+    |    |            and others  <http://www.ohwr.org/projects/wrpc-sw>):
+    |    |
+    |    |      Embedded software that runs inside the LM32 softcore
+    |    |        processor.
+    |    |
+    |    |-- arch:
+    |    |        Architecture specific code, like linker scripts and
+    |    |          boot code.
+    |    |
+    |    |-- boards:
+    |    |        Board specific parameters and initialization.
+    |    |
+    |    |-- dev:
+    |    |        Device specific code, such as UART, GPIO and DMA
+    |    |          interfaces.
+    |    |
+    |    |-- include:
+    |    |    |   General headers, mostly API device headers.
+    |    |    |
+    |    |    |-- hw:
+    |    |    |       Device specific registers and structures. This
+    |    |    |         definitions are included by the more general
+    |    |    |         headers located inside the "include" top
+    |    |    |         directory.
+    |    |    |
+    |    |    |-- memmgr:
+    |    |            Memory pool for "dynamic" allocated memory.
+    |    |
+    |    |-- lib:
+    |    |        Utilities and general functions, such as the memmgr
+    |    |          aubsystem and a printf-like function.
+    |    |
+    |    |-- tests:
+    |    |        Folder dedicated to software testing.
+    |    |
+    |    |-- tools:
+    |    |        General tools for generating RAM loadable file by
+    |    |          the firmware FPGA.
+
+    @end verbatim
+    @c @end cartouche
+
+@item @b{Coding Style}
+    The coding style for all of the modules must follow the Guidelines for VHDL
+    Coding document, available with this document or at @url{http://www.ohwr.org/documents/24},
+    and LNLS adaptations available alongside this document.
+@end table
+
+@c ##########################################################################
+@node Definitions
+@chapter Definitions
+
+Throughout this document the following definitions are used to clarify the
+importance of a particular statement or feature:
+
+@table @r
+
+@item MUST (NOT) / NEED (NOT) / NECESSARY
+    These keywords are used to specify an obligatory requirement. The deliverable
+    will not be compliant to this specification if not present.
+
+@item MAY (NOT) / MIGHT
+    These keywords are used to indicate that a specific requirement is desirable,
+    but not obligatory. The deliverable will be compliant to this document if not
+    present.
+
+@item SHOULD (NOT) / ADVISABLE (NOT) / RECOMMENDED (NOT)
+    These keywords are used to indicate that a specific requirement is a suggestion,
+    but it is advised to be followed or debated. The deliverable will be compliant
+    to this document if not present.
+
+@end table
+
+@c ##########################################################################
+@node Firmware Specification
+@chapter Firmware Specification
+
+The following sections will describe the required funcionality of the
+FPGA and each of the FPGA blocks as depicted in figure @ref{fig:bpm_firmware}.
+
+@float Figure,fig:bpm_firmware
+@center @image{img/bpm_firmware, 16cm, , BPM Firmware, png}
+@caption{FPGA firmware block diagram}
+@end float
+@sp 1
+
+@c ==========================================================================
+@node General Requirements
+@section General Requirements
+
+Every HDL module must adhere to the following requirements.
+
+@table @r
+
+@item @b{Firmware Layout}
+    Each AFC board must manage two sets of position measurement data values. @ref{fig:bpm_firmware},
+    depicts only the view of a single node of EBPM FPGA firmware. The complete
+    system is composed of a set of shared and a set of an independent blocks.
+    The following list enumerates the shared blocks between two EBPM firmware nodes.
+    All other blocks must be unique for each EBPM node.
+
+    @itemize @bullet
+
+    @item PCIe interface
+    @item Data acquisition
+    @item FOFB interface
+    @item LM32 soft-core processor
+    @item Interrupt manager
+    @item Multi-port memory controller
+    @item Board status block
+
+    @end itemize
+
+@item @b{Wishbone Bus Control}
+    All modules that can have its behaviour changed in any way or must output some
+    status values to a bus master must implement a Wishbone Bus Control and
+    Status Interface. This allows a Wishbone bus master to alter the behaviour
+    of a slave core in execution time, as to adhere to a specific requirement
+    as needed.
+
+@end table
+
+@c ==========================================================================
+@node Board Control and Status
+@section Board Control and Status
+
+This block contains all control and status registers related to the carrier
+board regardless of the application. The minimal set of necessary information
+is the following:
+
+@table @r
+@item @b{Bitstream type and date}
+    In order to allow identification of the current FPGA bitstream it is necessary
+    to have information about its type (constant value statically determined) and
+    the date of its generation in UTC format (value determined at synthesis time).
+
+@item @b{Bitstream meta-information}
+    It is necessary to have a means of identify the project repositories and the
+    current code maintainers. The Self-Describing Bus (SDB) standard developed
+    by CERN and others supports this feature and must be used.
+
+@item @b{Carrier temperature with continuous monitoring}
+    The Carrier temperature needs to be continuously monitored for safety reasons.
+    Upon exceeding a threshold, an interrupt should be generated to an interrupt
+    controller and transmitted to the systems' upper layers, such as the Single
+    Board Computer via PCIe.
+
+    Also, a historic temperature readings buffer must be stored to allow posterior
+    analysis and further processing of temperature values.
+
+@item @b{Power supplies and FMC status}
+    The Carrier power supplies needs to be monitored and stored to allow posterior
+    analysis of voltage and current data. Typically, power supplies provides a
+    power good signal to allow monitoring its status. Besides these signals,
+    onboard measurements of power supplies' voltage and current values may
+    be employed, acquired and stored to allow posterior alalysis and further
+    processing.
+
+    The Board status block needs to provide signals for detecting the presence
+    of an FMC board and the status of its power supplies. These are common
+    signals on FMC boards.
+
+@end table
+
+@c ==========================================================================
+@node PCIe Support
+@section PCIe Support
+
+The PCIe interface is the main communication channel between the AFCs and the Host.
+This allows the Host to send commands and requests to the AFC boards (i.e., Wishbone
+Master cycles in the FPGA point of view) and receiving command replies and data
+acquisition buffers (i.e., Wishbone Slave cycles in the FPGA point of view)
+
+This block must be compliant to the PCIe specification and be able to interface
+the Host through a Linux Operating System, by means of a Linux device driver.
+
+It is recommended to evaluate the possibility to use ZIO framework for developing
+acquisition drivers (@pxref{Support Projects and Repositories}, software support
+projects), as they are suited for this kind of application.
+
+Also, there is Linux bus infrastructure called @quotedblleft{}fmc@quotedblright{}
+(@pxref{Support Projects and Repositories}, software support projects) that can
+deal with FMC boards in a carrier-independent way. It is advisible to evaluate
+this possibility.
+
+@c ==========================================================================
+@node LM32 Sofcore Processor
+@section LM32 Sofcore Processor
+
+The LM32 Softcore processor, available at the General Cores repository
+(@pxref{Support Projects and Repositories}, FPGA firmware support projects) should
+be considered for general house-keeping functionalities, control and initial testing
+as it acts as a Wishbone Bus master.
+
+The processor is fully compliant with Wishbone B4 specification and has a full
+GCC toolchain port allowing cross-compilation. The deployment of the generated ELF file can be done
+in various ways, such as: dynamic configuration over JTAG port and LM32 Debug
+protocol, dynamic configuration over PCIe or static configuration via RAM pre-loading.
+
+@c ==========================================================================
+@node ADC Acquisition and Control Interface
+@section ADC Acquisition and Control Interface
+
+This block handles all communication with the FMC ADC board. There are three boards
+with different parameters and CIs that need to be supported: [1] Curtiss-Wright FMC516,
+[2] OHWR FMC130M16B4CH and [3] OHWR FMC250M16B4CH.
+
+Regardless of which board is being considered the following set of functionalities
+must be supported:
+
+@table @r
+
+@item @b{ADC programability}
+
+    The ADCs employed in all of the boards have configuration capabilities. Consequentely,
+    the core must provide a means to interface them. This is typically done by
+    reading/writing some ADC registers via SPI/@math{u}Wire or setting/clearing
+    some GPIO pins.
+
+@item @b{VCXO/VCO programability}
+
+    The crystal oscillators employed in all of the boards have configuration
+    capabilities. Consequentely, the core must provide a means to interface them.
+    This is typically done by reading/writing some VCXO/VCO registers via I2C.
+
+@item @b{Data Acquisition}
+
+    The block must ensure data integrity for all available clock frequencies
+    regardless of the ADC technology and mode of operation.
+
+    The output of this block must be a set os data pins, representing all
+    of the available ADC data channels and a single synchronous clock.
+    The output format must be of two forms:
+
+    @enumerate
+
+    @item @i{Raw Interface}
+
+        This interface is composed of a set of plain pins for the unprocessed ADC
+        data for all of the available channels and a synchronous clock
+        for downstream FPGA logic. An optional valid pin should be considered
+        for qualifying the data channels. This could be a single signal
+        for all of the ADC data channels or one signal for each ADC data
+        channels.
+
+    @item @i{Wishbone Streaming Interface}
+
+        This interface is composed of Wishbone signals to allow streaming
+        data with a backpressure scheme be supported. Each of the available
+        data channels must have a separate set of wishbone streaming signals.
+        A single synchronous clock is needed to be synchronous to all of the
+        channels and must be available for downstream FPGA logic.
+
+    @end enumerate
+
+@item @b{Clock Selection and Programability}
+
+    All of the boards support three types of clocking:
+
+    @itemize @bullet
+    @item @i{External direct clock}
+
+        In this mode, the clock comes from an external source and is fed into the front
+        panel connector which, in turn, is distributed by the clock distribution
+        circuit to all ADCs chips and downstream FPGA logic.
+
+    @item @i{External reference clock}
+
+        In this mode a reference clock is fed into the front panel conector and, in turn,
+        to a PLL circuit. This circuit is capable of generating various frequencies based
+        on the onboard oscillator.The generated clock is distributed by the clock
+        distribution circuit to all ADCs chips and downstream FPGA logic.
+
+    @item @i{Internal clock}
+
+        In this last mode, no external clock source is needed. The onboard oscillator in
+        conjunction with the clock distribution circuit generates the clock to all ADC chips
+        and downstream FPGA logic.
+
+    @end itemize
+
+    In order to support the operation described above, the core must implement all
+    the necessary interface to select between the modes and provides a mean to select
+    among the available frequencies. This typically involves writing via SPI to
+    the clock distribution circuit, I2C to the programmable oscillator (VCXO)
+    and direct setting some FPGA to FMC pins.
+
+    @c DO NOT MENTION SOFTWARE SUPPORT AS THIS IS A FIRMWARE SPECIFICATION
+    @c The software support must provide a means to easilly select between the modes,
+    @c selecting the desired clock frequency and reading/writing to all of the
+    @c referenced FMC chips registers.
+
+@item @b{Temperature Reading}
+
+    The FMC board temperature must be monitored for safety and board integrity.
+    Upon exceeding a threshold, an interrupt should be generated to an interrupt
+    controller and transmitted to the systems' upper layers, such as the Single
+    Board Computer via PCIe.
+
+    Also, a historic temperature readings buffer must be stored to allow posterior
+    analysis and further processing of temperature values.
+
+@item @b{Supply Rails Reading}
+
+    The FMC power rails needs to be continuously monitored for safety reasons.
+    The core must provide support for acquiring and storing volage data.
+
+    Also, a historic data buffer must be stored to allow posterior analysis and
+    further processing of voltage values.
+
+@item @b{EEPROM Support}
+
+    The ANSI VITA57.1 FMC specification determines that an EEPROM is to be present
+    in all FMC compliant boards. This memory stores hardware definition information
+    as defined by FRU (Field Replaceable Unit) @cite{CITATION} definition. Therefore,
+    the core must provide a means to read its contents.
+
+    @c DO NOT MENTION SOFTWARE SUPPORT AS THIS IS A FIRMWARE SPECIFICATION
+    @c Also, the software support must provide utilities to interface the EEPROM, while
+    @c keeping the design as platform-agnostic as possible.
+
+@item @b{Additional EEPROM Support}
+
+    If the board contains additional EEPROM memories, such as the Curtiss-Wright
+    FMC516 board, it is necessary to have an interface to read/write to it.
+
+    @c DO NOT MENTION SOFTWARE SUPPORT AS THIS IS A FIRMWARE SPECIFICATION
+    @c Also, the software support must provide utilities to interface the EEPROM, while
+    @c keeping the design as platform-agnostic as possible.
+
+@item @b{Fine Delay Support}
+
+    It is necessary to be able to apply fine delay (in sub-nanoseconds granularity)
+    for both data and clock individually for each path. This ensures timing flexibility for
+    different FPGAs and carrier boards for data acquisition.
+
+    @c DO NOT MENTION SOFTWARE SUPPORT AS THIS IS A FIRMWARE SPECIFICATION
+    @c The software support must provide a means of individually change the delay value
+    @c for each data and clock paths. Individual bit fine-delay programmability should
+    @c be considered.
+
+@item @b{Automatic Fine Delay Calibration}
+    An automatic calibration routine (preferrably in hardware) should be considered
+    in order to allow independent setting of fine delay values for each data and clock
+    paths.
+
+    The routine should be executed periodically to adjust fine delay values in
+    order to correct data and clock mismatches due to temperature drifts and other
+    environmental parameters.
+
+@c If you need this you probably have something wrong in your design! Right?
+@c @item @b{Coarse Delay Support}
+@c
+@c     A coarse delay (in ADC clock cycles granularity) per data bit basis should be
+@c     considered to allow synchronizing each data path.
+@c
+@c     This should be software controllable.
+@c
+@c @end table
+
+@item @b{Trigger Support}
+
+    There are commonly two types of external triggers on the FMC ADC boards.
+
+    @enumerate
+
+    @item @i{Trigger In}
+
+        This trigger is available in the front panel as an input port. A single-ended
+        trigger signal should be outputted to downstream FPGA logic.
+
+    @item @i{Trigger Out}
+
+        This trigger is available in the front panel as an output port. A single-ended
+        trigger signal should be outputted to the FMC front panel connector.
+
+    @end enumerate
+
+    Both trigger ports should be outputted to downstream FPGA logic for further control.
+
+@end table
+
+@c ==========================================================================
+@node Timestamping
+@section Timestamping
+
+    This block must generate a nanosecond-granularity timestamp, in order to
+    univocally identify the position data at all rates. Generally, a 64-bit register,
+    divided in a 32-bit low part and a 32-bit high part, should be used for that
+    matter.
+
+    The following functionalities must be supported:
+
+@table @r
+
+@item @b{Loadable Values}
+
+    The block must support initial loadable timestamps, in order to allow
+    execution-time loadable values.
+
+@item @b{Synchronization Support}
+
+    The block must support external synchronization pulses, in order to allow
+    synchronization among several FPGAs and to an external source. Together with
+    the @code{Loadable Values} feature, it will be possible to correctly set all
+    timestamp blocks to a determined value synchronously.
+
+    In order to achieve this the following is recommended:
+
+    @itemize
+
+    @item @i{Timecode}
+      It must support a specified timecode in order to allow support an initial
+      date and time.
+
+    @item @i{PPS Support}
+        It must provide a PPS input for accurately synchronizing seconds.
+
+
+    @item @i{Reference Clock}
+        It must provide a low jitter reference clock input to accurately ascertain
+        the time (in nanoseconds granularity).
+
+    @end itemize
+
+@end table
+
+@c ==========================================================================
+@node Digital Signal Processing
+@section Digital Signal Processing
+
+    This block must provide ADC raw data and position measurement and amplitude
+    values at various defined rates. It must be modular, in order to improve
+    maintainability and robusetness.
+
+@c --------------------------------------------------------------------------
+@node Digital Signal Processing Overview
+@subsection Overview
+
+    The digitized data needs to be conditioned through a series of digital filters,
+    decimators and others algorithms in order to extract the position measurement data.
+    Some of the sub-modules needed for this core are: Band-pass filter, Mixers,
+    NCO (numerically controlled oscillator) FIR filters (direct form, transpose,
+    polyphase structures and/or others), Half-band filters (decimate by two),
+    CIC (Cascaded-Integrator comb) filter, CORDIC (COordinate Rotation DIgital
+    Computer)and Difference over sum (Delta over sigma).
+
+    The block must provide unprocessed ADC data at the ADC rate and position
+    measurement in three different rates: Turn by Turn data (TBT), Fast Acquisition
+    (FOFB) and Slow acquisition (Monitoring) data.
+
+    The signal processing chain consists of an I/Q demodulation scheme followed
+    by an amplitude detector and various stages of decimation. Finnaly, in possession
+    of the amplitude of all four data channels, the delta-over-sum algorithm is
+    calculated and the position data is produced.
+
+    It is necessarry to provide signal processing chains in two versions: one for
+    476.066 @math{MHz} RF frequency and another for 499.795 @math{MHz} RF frequency.
+    This has a direct impact on the ADC clock, IF frequency, output rates and the
+    decimation rate in each stage.
+
+@c --------------------------------------------------------------------------
+@node Digital Signal Processing Description
+@subsection Description
+
+    All unprocessed ADC data channels from the ADC interface block are necessary
+    to be inputs to the digital signal processing block. Each of these channels
+    must be individually processed, in order to extract the amplitude of the
+    incoming signal.
+
+    Typically, the signal is downconverted to baseband by mixing the incoming
+    signal to a generated signal (e.g, DDS) of the same frequency and filtering
+    the high frequency components. This is depicted in @ref{fig:dsp_473_overview}.
+    The BPF in the beginning of the processing chain is generally used to avoid
+    the self-mixing problem present when mixing signals.
+
+    Following, it is necessary to decimate and detect the amplitude of the signal.
+    The former should be done by a decimation filter, such as a FIR polyphase
+    implementation to reduce the frequency to the so called Turn-by-Turn or
+    TBT rate. The latter should be done by employing a coordinate system change,
+    as the data is presented in cartesian (i.e., I/Q) form and the amplitude
+    value can be extracted by @math{-\arctan {Q \over I} }, polar coordinate variable.
+    This can be accomplished by the use of CORDIC algorithm.
+
+    With the values of the amplitudes of the four channels, the delta over sum
+    algorithm must be calculated, in order to produce position measurement values.
+    The values are calculated by the following expressions:
+
+    @tex
+     $$ X = K_{x} * {(B + C) - (A + D) \over A + B + C + D} - X_{offset} $$
+    @end tex
+
+    @tex
+     $$ Y = K_{y} *  {(A + B) - (C + D) \over A + B + C + D} - Y_{offset} $$
+    @end tex
+
+    @tex
+     $$ Q = K_{x} *  {(A + C) - (B + D) \over A + B + C + D} - Q_{offset} $$
+    @end tex
+
+    @tex
+     $$ Sum = K_{sum} * \left ( A + B + C + D \right) + S_{offset} $$
+    @end tex
+
+    Following, the position measurement values must be generated at other lower
+    rates, apart from the TBT (Turn-by-Turn) rate, such as: FOFB (i.e., Fast Orbit
+    Feedback) rate and Monitoring (i.e., Monit) rate. From now on, these acronyms
+    will be use when referencing to a specific data rate. @ref{tab:bpm_rates}
+    shows how these frequencies are calculated.
+
+    @float Table,tab:bpm_rates
+    @multitable @columnfractions .32 .30 .18
+    @headitem Rate      @tab      Formula                           @tab    Typical Value (@math{D = 203})
+
+    @item ADC           @tab      @math{ADC_{rate} =
+                                        {f_{rf} {D \over h}}}       @tab    @math{~117.5MHz}
+
+    @item TBT (Turn-by-Turn)
+                        @tab      @math{TBT_{rate} =
+                                        {ADC_{rate} \over 188}}     @tab    @math{~625KHz}
+
+    @item FOFB (Fast Orbit Feedback)
+                        @tab      @math{FOFB_{rate} =
+                                        {ADC_{rate} \over 1175}}    @tab    @math{~100KHz}
+
+    @item Monit. (Monitoring)
+                        @tab      @math{Monit_{rate} =
+                                        {FOFB_{rate} \over 10000}}  @tab    @math{~10Hz}
+
+    @end multitable
+    @caption{EBPM position measurement rates}
+    @end float
+
+    Also, all of the DSP cores are synchronous to the ADC clock, independently
+    of the data rate.
+
+    @ref{fig:dsp_473_overview} depicts a possible implementation of a digital
+    processing chain for 473.6 @math{MHz} RF frequency.
+
+    @float Figure,fig:dsp_473_overview
+    @center @image{img/dsp_473_overview, 16cm, , DSP Overview, png}
+    @caption{DSP Overview}
+    @end float
+    @sp 1
+
+@c --------------------------------------------------------------------------
+@node Digital Signal Processing Required Funcionalities
+@subsection Required Funcionalities
+
+@table @r
+
+@item @b{Data Output Format}
+
+    The output of this block must be a set os data pins, representing all
+    of the available processed and unprocessed channels and a single synchronous
+    clock to the ADC. The output format must be of two forms in order to
+    provide flexibility and room for further improvements:
+
+    @enumerate
+
+    @item @i{Raw Interface}
+
+        This interface is composed of a set of plain pins for all of the processed
+        ADC data channels and a single synchronous clock to the ADC for downstream
+        FPGA logic. A valid pin must be used for qualifying the data channels.
+        There must be a valid pin for each of the processed channels as they
+        contain data in different, but correlated, frequencies.
+
+    @item @i{Wishbone Streaming Interface}
+
+        This interface is composed of Wishbone signals to allow streaming
+        data with a backpressure scheme be supported. Each of the available
+        data channels must have a separate set of Wishbone Streaming Signals.
+        A single synchronous clock is needed to be synchronous to the ADC clock
+        and must be available for downstream FPGA logic.
+
+    @end enumerate
+
+@item @b{Position Measurement Data}
+
+    The signal processing chain must generate the following data:
+
+    @itemize @bullet
+
+    @item @i{ADC Raw Data @@ ADC rate}
+
+        This data stream must be outputted by the chain unprocessed at the ADC
+        rate
+
+    @item @i{Amplitude values @@ TBT rate}
+    @item @i{Amplitude values @@ FOFB rate}
+    @item @i{Amplitude values @@ Monit. rate}
+
+        All of the amplitude data values of every channel must be outputted
+        by the chain at TBT, FOFB and Monit. rates.
+
+    @item @i{Position Data values @@ TBT rate}
+    @item @i{Position Data values @@ FOFB rate}
+    @item @i{Position Data values @@ Monit. rate}
+
+        The chain must output X, Y, Q and Sum position data as described
+        earlier at TBT, FOFB and Monit. rates.
+
+    @end itemize
+
+@item @b{Low Delay FOFB Filtering}
+
+  A dedicated low @tref{group delay} path for the FOFB position data must be
+  implemented. It is important to keep the FOFB delay path at about 200us
+  (TBD), considering the DDC delay plus the FOFB filtering and position
+  calculation.
+
+  Higher group delay within the FOFB path could limit the total performance
+  of the FOFB system.
+
+@item @b{Reloadable Filter Coefficients}
+
+    All employed filters must have reloadable coefficients, in order to allow
+    execution (i.e., dynamic) time reconfiguration.
+
+@item @b{Programmable DDS Phase Offset per Channel}
+
+    It is necessary to have a fine (sub-ns granularity) delay support for each
+    RF input signal (i.e., for each data channel), in order to match possible
+    physical (i.e., PCB and routing) delays. This could be done by supporting
+    dynamic reconfiguration of the DDS phase output for each data path.
+
+@item @b{Programmable DDS Frequency per Channel}
+
+    It is necessary to have a DDS programmable frequency in execution time for
+    each data channel.
+
+@item @b{Dynamic Ks Coefficients}
+
+    The K coefficients (@math{K_{x}}, @math{K_{y}}, @math{K_{sum}}) for each
+    delta over sum calculation must support dynamic reconfiguration, in order
+    to allow changing its value.
+
+@end table
+
+@c ==========================================================================
+@node Data Acquisition
+@section Data Acquisition
+
+This subsystem is responsible for storing/retrieving position data.
+Data can be stored on demand (i.e., via triggers or upon request) or
+continuously and must provide fast and reliable retrieval of data.
+
+Also, there must be a Multi-Port Memory Controller interface to an external
+memory (i.e., DDR SDRAM), in order to allow large quantities of data to be stored.
+
+@c --------------------------------------------------------------------------
+@node Data Acquisition Overview
+@subsection Overview
+
+All of the Position Measurement Data specified in @ref{Digital Signal Processing}
+must be stored and will serve as inputs to this module.
+
+Raw ADC data at ADC rate along with position data and amplitude values at TBT rate
+must be stored only when on request (i.e., through a trigger or upon request from
+the Wishbone Bus). Position data and amplitude values at FOFB and Monit. rate must
+be stored continuously in a circular buffer organization.
+
+DEFINE THE MEMORY LAYOUT FOR DIFFERNT ACQUISITION MODES (TBD).
+
+@c --------------------------------------------------------------------------
+@node Data Acquisition Triggers
+@subsection Triggers
+
+The block must support the set of triggers described below, in order to start an
+acquisition/storage process.
+
+@itemize @bullet
+
+@item @i{Data-Driven Triggers}
+
+    This subset refers to triggers active when an specified threshold is surpassed.
+    It is common when requiring that a data acquisition happens on some data
+    exceeding a determined value, such as amplitude or overall sum data.
+
+@item @i{Post-Mortem Triggers}
+
+    This type of trigger is an external one that refers to a beam loss. On such
+    occurence, there must be a set of special buffers specifically to record the
+    last position data values for posterior analysis.
+
+@item @i{User-Defined Triggers}
+
+    There must be a generic trigger input making it possible for the user to
+    specify an aquisition when some event occur.
+
+@item @i{External Triggers}
+
+    There must be a generic trigger input making it possible for any external
+    pulse trigger start an acquisition process.
+
+@end itemize
+
+@c --------------------------------------------------------------------------
+@node Data Acquisition Required Funcionalities
+@subsection Required Funcionalities
+
+@table @r
+
+@item @b{Position Data Storage/Retrieval}
+
+    All position data produced by the DSP chain (@pxref{Digital Signal Processing})
+    must be stored in dedicated buffers, as described below:
+
+    @enumerate
+    @item @i{ADC Rate Data}
+
+        This buffer is intended to store Raw ADC values. The buffer is logically
+        partitioned equally among the trigger types defined in @ref{Data Acquisition Overview}.
+        Buffer type: on demand. Buffer size: 64MB (TBD). Describe the logical partition
+        of data (TBD).
+
+    @item @i{TBT Rate Data}
+
+        This buffer is intended to store processed position data and amplitude
+        values at TBT rate. Buffer type: on demand. Buffer size: 64MB (TBD).
+        Describe the logical partition of data (TBD).
+
+    @item @i{FOFB Rate Data}
+
+        This buffer is intended to store processed position data and amplitude
+        values at FOFB rate. Buffer type: continuous, circular.
+        Buffer size: 64MB (TBD). Describe the logical partition of data (TBD).
+
+    @item @i{Monit. Rate Data}
+
+        This buffer is intended to store processed position data values at monit.
+        rate. Buffer type: continuous, circular. Buffer size: 64MB
+        (TBD). Describe the logical partition of data (TBD).
+
+    @end enumerate
+
+    For each type of acquisition mode (i.e., triggered, on request or continuous)
+    and buffer type there must be a header or meta-information alongside with the
+    stored data, in order to define a boundary definition of an acquisition or
+    data-batch (i.e., a set of time-related data).
+
+@item @b{Window Buffers}
+
+    This block must kept information about the TBT and FOFB @dfn{Windows}. Windows
+    are raw ADC sample data that are used to calculate one position data. The following
+    windows are defined.
+
+    @itemize @bullet
+    @item @i{TBT Window}
+
+        The TBT window is defined as the number of ADC samples at ADC rate used
+        to calculate one position data at TBT rate. This is defined in the ADC
+        buffer.
+
+    @item @i{FOFB Window}
+
+        The FOFB window is defined as the number of ADC samples at ADC rate used
+        to calculate one position data at FOFB rate. This is defined in the ADC
+        buffer.
+
+    @item @i{Monit. Window}
+
+        The Monit. window is defined as the number of FOFB samples at FOFB rate
+        used to calculate one position data at Monit. rate. This is defined in
+        the FOFB buffer.
+
+    @end itemize
+
+    This information is necessary, in order to allow for retrieval of data windows
+    by external logic and possiblying the execution of some DSC algorithms
+    (@pxref{Digital Signal Conditioning}).
+
+@item @b{Acquisition Modes}
+
+    There must be support for triggered acquisitions for all triggers defined in
+    @ref{Data Acquisition Overview} for high rate (i.e., ADC and TBT rate) data
+    streams and slow rate (i.e., FOFB and Monit.), as well as on request
+    acquisitions. FOFB and Monit. rate data streams should also support continuous
+    acquisition, as the relatively slow data rate allows it.
+
+    The block must support retrieval of data at all rates via DMA
+    transfers to PCIe interface. The following enumerates the needed modes:
+
+    @itemize @bullet
+
+    @item @i{Triggered}
+
+        This mode refers to an acquisition started by setting and arming an specified
+        trigger (@pxref{Data Acquisition Triggers}). It should support a
+        variable acquisition request size, but may pad the actual request with
+        aditional data for alignment purposes.
+
+    @item @i{On-request}
+
+        This mode contemplates the case when an external block or the Bus master
+        wishes to acquire an specified amount of data as soon as possible.
+        It should support a variable acquisition request size, but may pad
+        the actual request with aditional data for alignment purposes.
+
+    @item @i{Continuous}
+
+        This last mode refers to a continuous storage of data necessary for slow
+        rate data, such as: position data at FOFB and Monit. rates. It must support
+        storage in a limited, detemined, memory size, overwriting the oldest data
+        in place first. This mode is particularly useful for the Post-Mortem application
+        (@pxref{Data Acquisition Triggers}).
+
+    @end itemize
+
+    The block must not impose any particular protocol on the acquisition interface
+    and must provide a generic and flexible set of acquisition options. For the
+    latter, a multi-shot logic, with pre-trigger and post-trigger acquitision phases,
+    supporting an undeterminate number of pre-trigger/post-trigger
+    repetitions is advisable to be implemented.
+
+@item @b{Retrieval Modes}
+
+    The block must support a flexible and generic set of data retrieval options.
+    It must allow external logic to request any position data buffer with configurable
+    sizes.
+
+    The block must support retrieval of data with all timestamping modes, when available.
+    Even though the data could be stored with @sc{Timestamped Acquisition} or
+    @sc{Batched-Timestamped Acquisition} timestamps, the retrieval of the
+    timestamps must be optional if they are not required for that specific
+    retrieval action.
+
+@item @b{Tracking Information}
+
+    The block must keep track of all meta-information related to the stored data.
+    The following information must be present:
+
+    @itemize @bullet
+
+    @item @i{Number of Stored Acquisitions: per buffer and global}
+
+        This represents the number of total triggered or on request acquisitions
+        currently performed and completed by the block.
+
+    @item @i{Number of On Progress Acquisitions: per buffer and global}
+
+        This represents the number of total triggered or on request acquisitions
+        currently in progress or scheduled by the block.
+
+    @item @i{Number of Non-requested Acquisitions: per buffer and global}
+
+        This represents the number of total triggered or on request acquisitions
+        completed by the block, but not yet requested by an external logic
+        (i.e., PCIe block).
+
+    @item @i{Remaining Space for Data Storage: per buffer}
+
+        This represents the space left for storage for any acquisition mode before
+        overwriting a Non-requested acquisition.
+
+    @end itemize
+
+@item @b{Timestamping Support}
+
+    The block must support timestamping for all of the position data at all rates.
+    It must be possible to select among the following:
+
+    @itemize @bullet
+
+    @item @i{Simple Acquisition}
+
+        In this mode no timestaming information is stored along the data. This is
+        called raw storage. The minimum information packet will
+        contain only data.
+
+    @item @i{Timestamped Acquisition}
+
+        In this mode, all incoming data that was scheduled for storage (i.e., either
+        by a triggered acquisition, on request or continuously) must have a timestamp
+        associated with it. The minimum information packet will contain data + timestamp.
+
+    @item @i{Batched-Timestamped Acquisition}
+
+        In this mode, every batch of data, such as an specified number of samples
+        acquired from a triggered acquisition, must have a single timestamp information
+        at the beginning of it. This composes the header of the acquired
+        batch. The minimum information packet will contain data + timestamp header
+        (unique for each batch of data).
+
+        Also, it should be possible to retrieve just the data with no timestamp
+        or the data + associated batch timestamp (i.e., timestamp header).
+
+    @end itemize
+
+@end table
+
+@c ==========================================================================
+@node RFFE Interface
+@section RFFE Interface
+
+This block is responsible for coordinating the switching/deswitching control with
+the RFFE and the host system (i.e., SBC) and sending the synchronization clock
+to the RFFE control board. It is important to elucidate that the switching
+mechanism is implemented in the RFFE board (i.e., analog process), whereas the
+deswitching mechanism is implemented in the FPGA (i.e., digital process).
+
+@c --------------------------------------------------------------------------
+@node RFFE Interface Overview
+@subsection Overview
+
+The typical use case for the RFFE Interface block will be described in the next.
+The host system sends an Ethernet command to the RFFE control board informing
+that it wants to turn the switching scheme on. This will allow the control board
+to prepare itself for the synchronization clock (also called swiching clock).
+In parallel, or after a determined delay, a PCIe command is sent to the Carrier
+Board (i.e., AFC).
+
+Next, this command is routed to the RFFE Interface block which, in turn, acknowledges
+it. From this point on, the block must:
+
+@enumerate
+
+    @item @i{Configure itself to generate the specified switching clock frequency}
+    @item @i{Generate the specified switching clock}
+    @item @i{After a measured propagation delay between the generated switching clock
+    and the actual switching of the ADC data (actual implementation of the switching in
+    the RFFE board + RFFE PCB delays + ADC PCB delays + Digitalization delay), the
+    block will start the generation of the deswitching clock at the same rate of
+    the switching clock}
+
+@end enumerate
+
+The generation of the switching/deswitching clock should be kept indefinitely or
+until recepetion of a command specifing to turn the switching scheme off.
+
+@c --------------------------------------------------------------------------
+@node RFFE Interface Required Functionalities
+@subsection Required Functionalities
+
+@table @r
+
+@item @b{Switching/Deswitching Control}
+
+    The block must support the generation of switching and deswitching clocks
+    on request.
+
+@item @b{Configurable Deswitching Clock Delay}
+
+    It is needed to support a run-time configurable delay for the deswitching clock,
+    in order to account for the delay associated between the switching clock delay
+    and the actual visible effect of the switching (i.e., ADC data routed to
+    a non-canonical channel).
+
+@end table
+
+@c ==========================================================================
+@node Digital Signal Conditioning
+@section Digital Signal Conditioning
+
+In order to increase the performance of the system a series of improvements algorithms
+must be supported. The actual implementation may be acomplished as a hybrid approach
+in FPGA (i.e., HDL firmware design) and the SBC (i.e., user application design).
+
+The data from the ADC may need additional amplification from the RFFE (RF front-
+end) as well as channel de-switching (i.e., crossbar). These two features
+compose the following: AGC (Automatic Gain Control) and RFFE interface in order
+to automatic control the gain from the RFFE board; Scaler, concerning the digital
+gain on the ADC data; Crossbar de-switching, regarding the channel switching
+introduced in the RFFE.
+
+@table @r
+
+@item @b{Gain compensation (DSC coefficients)}
+
+    This is necessary to improve the system performance when using the switching
+    scheme, in order to equalize the switching ADC/RFFE signal pair.
+
+    Typically, all RFFE paths have slighly different gains that is seen by the digitizer
+    and hence by the FPGA Digital Processing Chain (@pxref{Digital Signal Processing}).
+    When the switching in turned on, the indivudual RF signals will have a different
+    gain and this would translate to a false change in beam position. In order to
+    mitigate this undesired effect of the switching scheme, it is necessary to implement
+    a correction matrix to be applied to the ADC data before further processing
+    by the Digital Processing Chain.
+
+    This algorithm should be best suited for implementation on the SBC, altough
+    the resulting coefficients must be applied to the FPGA.
+
+@item @b{Phase Compensation (DSC coefficients)}
+
+    This is necessary to improve the system performance when using the switching
+    scheme, in order to equalize phase shifts in the switching ADC/RFFE signal pair.
+
+    Regardless of where the shift is originated, this algorithm will compensate
+    the relative phase difference among all channels. In order to do that, one
+    channel should be take as a reference and compared to all others. Later a
+    correction matrix is generated and must be applied to the ADC data before
+    further processing by the Digital Processing Chain.
+
+    It is important to notice that, as the algorithm uses digital data as input,
+    it only sees clock cycle granularity shifts and, therefore, can only correct
+    phase shifts of the same granularity.
+
+    This algorithm should be best suited for implementation on the SBC, altough
+    the resulting coefficients must be applied to the FPGA.
+
+@item @b{DSC Coefficients Learning Cycle: automatic coefficients calculation}
+
+    The phase and gain compensation algorithms must be calculated dynamically
+    by the host system without the need of user intervention. Also, they must be
+    calulated at a defined pragramable rate (typically this value should be around
+    @math{0.1 Hz}), in order to constatantly correct the undesired effects.
+
+    Typically, there will be a learning cycle delay, but this should be kept to
+    the minimum necessary, as the position data is invalid during this phase.
+
+@item @b{DSC Coefficients Storage/Retrieval}
+
+    It must be possible to save the coefficients' matrices of both gain and phase
+    compensaton algorithms in a non-voltile memory. This allows for restoring
+    them when the system is rebooted by any reason.
+
+    Also, a minimum set of the last calculated DSC coefficients' must be kept in
+    a non-volatile memory to allow the user restoring any of them. The exact number
+    of stored snapshots must be user configurable. Typical numbers are 10 or 100.
+
+@item @b{DSC Coefficients Calculation Threshold}
+
+    There must be a low beam current threshold, in that when surpassed, no DSC
+    calculations are performed. In this case the coefficients are not reliable.
+
+    This should be implemented as a low threshold for the ADC counts. Something
+    around 400 counts is considered safe.
+
+@item @b{Switching Delay}
+
+    When the machine is operating in partial beam filling, it is possible to reduce
+    the undesired effects of the switching scheme by delaying the switching rotation
+    by an execution-time programmable value. This is used by adjusting the RFFE
+    switching time at the empty part of the turn, therefore minimizing glitches
+    introduced by the switching.
+
+@item @b{Spike Removal}
+
+    The switching scheme introduces spikes each time it rotates. Considering a
+    switching clock of @math{switching_{clock} = 100KHz} and a TBT rate of
+    @math{625KHz}, roughly every 6 TBT samples will have a spike, lasting around 3 TBT samples.
+
+    Even though narrowband data are less influenced by the switching scheme, as
+    the FOFB rate, and consequently slower rates as the Monit. rate, the spike
+    removal algorithm must operate on these rates as well.
+
+    The general idea of the algorithm is as follows:
+
+    @enumerate
+
+    @item Calculate the avarage of the last set of data (i.e., TBT, FOFB or Monit.),
+    before the spike occurence and between a pre-defined window.
+
+    @item Replace the spike by the avarerage values calculated in the previous step.
+    The number of samples affected by the spike is generally around 3
+    samples.
+
+    @end enumerate
+
+    Careful must be taken considering sub-harmonics of the switching rate. If two
+    switch patterns are used, @math{{1 \over 2} switching_{clock}} sub-harmonic is
+    generated and is four switch patterns are used, a @math{{1 \over 2} switching_{clock}}
+    @math{{1 \over 4} switching_{clock}} are generated.
+
+@item @b{ADC Mask}
+
+    This functionality is directly related to the @i{Window Buffers}
+    (@pxref{Data Acquisition Required Funcionalities}). The ADC Mask is an information
+    inputted by the user meaning which of the samples in the TBT Window will be
+    used for calculation of the TBT position data.
+
+    This is particularly useful when the machine is operating in partial fill and
+    the TBT window contatins both useful data (i.e., beam information, when an
+    electron packet excites the BPM) and noise only(i.e., gap information, when
+    no packet excited the BPM).
+
+    This ADC mask may be a logical vector of the TBT window size, describing which
+    samples should be considered when calculating the TBT position data.
+
+    (TBD: SHOULD THE SAME BE APPLIED TO FOFB DATA?)
+
+@item @b{Window Phase Offset}
+
+    Due to different EBPM positions around the ring, it is necessary to support
+    a controllable phase offset in the ADC data acquired for each EBPM.
+
+    This parameter will define the position of the data in the TBT window, so as
+    to synchoronize (i.e., tunning) data output of different EBPMs.
+
+@end table
+
+@c ==========================================================================
+@node Orbit Interlock
+@section Orbit Interlock
+
+    The Orbit Interlock functionality is implemented in conjuction with the Digital
+    Signal Processing (@pxref{Digital Signal Processing}),
+    Data Acquisition Triggers (@pxref{Data Acquisition Triggers}) and Data Acquisition
+    (@pxref{Data Acquisition}).
+
+    The objective of the Orbit Interlock is to improve the safety of the machine
+    by continuously monitoring some specified parameters to ensure no damage is done
+    to the machine.
+
+@c --------------------------------------------------------------------------
+@node Orbit Interlock Required Functionalities
+@subsection Required Functionalities
+
+@table @r
+
+@item @b{Orbit Interlock Trigger}
+
+    The block must support the generation of an output trigger when any orbit
+    interlock event occur (see below).
+
+    There must be a minimum pulse width to ensure the event is actually
+    captured by the ring control system. This value is typically around @math{10ms}.
+
+@item @b{Interlock Types}
+
+    It is forseen two types of interlock:
+
+    @enumerate
+    @item @i{Data Position Threshold}
+
+        In this type, the position data (typically the FOFB position data) is
+        continuously monitored, in order to detect exceeding values of X and Y
+        position data. When the position data surpasses these specified limits, an
+        interlock trigger signal must be generated.
+
+    @item @i{ADC Overflow}
+
+        This type continuosly monitors the ADC data, in order to detect overflows
+        (i.e., ADC saturation) and its duration. When the ADC data surpasses these
+        specified limits, an interlock trigger signal must be generated.
+
+    @end enumerate
+
+    The interlock functionality must support enable/disable switch in run-time.
+
+@end table
+
+@c ==========================================================================
+@node Interrupt Manager
+@section Interrupt Manager
+
+    The interrupt manager block is responsible for aggregating all of the interrupts
+    generated by other blocks and controling the forwarding and acknowledment of
+    them by the Host system (i.e., SBC) via PCIe.
+
+    The following functionalities must be presented:
+
+@table @r
+
+@item @b{Vectored Interrupt}
+
+    The interrupt manager must support a vectored interrupt control as to identify
+    which peripheral sent each interrupt.
+
+@item @b{PCIe MSI/X Support}
+
+    There must be support for driving the PCIe MSI and MSI-X interrupt types.
+
+@end table
+
+FIXME: DOES IT MAKES SENSE TO SUPPORT VECTORED INTERRUPT AND PCIe MSI/X?
+
+@c ==========================================================================
+@node Ethernet Support
+@section Ethernet Support
+
+    The main communication interface between the AFC and the Host will be performed
+    by means of the PCIe interface. However, an Ethernet support allowing communication
+    between the AFCs and an Ethernet network with UDP and/or TCP would be very beneficial.
+    This would be used mainly for debugging, control and data acquisition.
+
+    Also, it allows the AFC board to be used in stand-alone mode, without a Host
+    and a microTCA environment.
+
+    The following requirements are needed to support this possibility:
+
+@table @r
+
+@item @b{Link Layer Support}
+    An Ethernet Link Layer support must be provided. For this, an Ethernet FPGA-core
+    MAC must be implemented to support the basis of an Ethernet-based communication.
+    There are many options for this. It is possible to use one of the available
+    Wishbone cores from @url{http://opencores.org/projects} or another suitable option.
+
+@item @b{Network Layer Support}
+@itemx @b{Transport Layer Support}
+
+    For supporting the Network (i.e., IP) and Transport (i.e., UDP/TCP) layers
+    it is necessary to provide one of the following approaches (TBD):
+
+    @itemize @bullet
+
+    @item @i{Full Hardware Support}
+
+        In this approach, Network and Transport layers support are provided by
+        means of hardware only (i.e., FPGA cores). Commonly, UDP/IP protocols
+        are directly supported in hardware and a user interface is make available,
+        in order to allow setting the destination IP, port, MAC and the message
+        payload. There are also open-source initiaves to support these layers,
+        available in @url{http://opencores.org/projects}.
+
+        Altough this approach has a benefit of relinquishing the processor (hard or
+        soft core processor) of processing these protocols, we loose flexibility
+        by only supporting a very limited set of protocol options. Also, it is
+        more difficult to include support to other protocols.
+
+    @c @item @i{Mixed Software/Hardware Support}
+    @c
+    @c     It is possible to use a hybrid approach of hardware and software for supporting
+    @c     these layers
+
+    @item @i{Full Software Support}
+
+        In this approach the processing of the Network and Transport layers are
+        done in software, by a processor (i.e., hard or soft core processor).
+        This approach will incur an overhead in the processor and limit its
+        latency and throughput for other activities. However, it is generally
+        easier to support new protocols or to optimize the existing ones to suit
+        a determined need.
+
+        There are open-source libraries to support a variety of internet protocols,
+        such as: LwIP (lightweight TCP/IP stack, available at @url{http://savannah.nongnu.org/projects/lwip/})
+        and uIP (micro IP stack).
+
+    @end itemize
+
+@item @b{Application Layer Support}
+
+    It is necessary to define an application protocol to allow the use cases
+    mentioned in the beginning of this section. This could be done in software
+    or to hardcode a simple protocol directly in hardware.
+
+    A more suitable choice would be to support a defined protocol with support
+    to control a wishbone-based system and acquire data from it. Such protocol
+    is present by the Etherbone project (@pxref{Support Projects and Repositories},
+    FPGA firmware support projects), described below.
+
+    Etherbone (application protocol over TCP/IP stack) allows efficient
+    communication between the AFC board and any computer connected to the
+    Ethernet network.
+
+    The project already has, at the moment of this writing,
+    an slave FPGA core that fully supports the defined communication protocol and a
+    software Etherbone master that can send commands and other features.
+
+    The intermediate layers of the TCP/IP stack (i.e., IP and transport layers)
+    are already builtin within the Etherbone slave FPGA-core. Currently, only UDP
+    is supported. In this way, it is not necessary to support nor to implement
+    IP/UDP for this particularly application.
+
+    Etherbone support would be very benefical, as much of the work is already done
+    and it supports the required funcionality. It integrates easily with Wishbone-based
+    systems, as it acts as a Wishbone Master in one side and as an Ethernet client
+    in the other.
+
+@end table
+
+@c ==========================================================================
+@node Real-Time Data Distribution and Synchronization
+@section Real-Time Data Distribution and Synchronization
+
+It is necessary that the BPMs communicate with each other to exchange data and
+perform inter-BPM synchronization, therefore contemplating the FOFB (Fast Orbit
+Feedback) system. In order to support this, multi-gigabit communication is needed.
+
+It is also necessary to achieve hard real-time constraints in distributing the data
+over all EBPM nodes and actuating in the beam correctors. Therefore, constituting
+a hard real-time system.
+
+@c ==========================================================================
+@node Real-Time Data Distribution and Synchronization Overview
+@subsection Overview
+
+The FOFB system makes use of the position data at FOFB rate generated by the
+Digital Signal Processing chain (@pxref{Digital Signal Processing}) and dedicated
+FPGA firmware, in order to distribute FOFB position data to all other EBPMs around the machine.
+
+@ref{fig:fofb_topology} depicts a possible topology of the FOFB system around the machine.
+This must be further discussed to evaluate other topologies.
+
+@float Figure,fig:fofb_topology
+@center @image{img/fofb_topology, 12cm, , FOFB Topology, png}
+@caption{FOFB Topology}
+@end float
+@sp 1
+
+The FOFB algorithm is global in the sense that every EBPM node needs information
+of every other EBPM in the machine. Therefore, reliable and low delay data distribution
+is required to reach the specifications.
+
+The general algorithm is as follows:
+
+@enumerate
+
+    @item @i{Position Data is generated by the DSP chain at FOFB rate. This is
+    called @sc{generation phase}.}
+    @item @i{Position Data at FOFB rate is transmitted to a single data concentrator
+    node through multi-gigabit communication. This is called @sc{transmittion phase 1}.}
+    @item @i{Data concentrator node waits to receive data from all EBPM nodes.}
+    @item @i{Data concentrator node calculates FOFB global correction algorithm.
+    This is called @sc{calculation phase}.}
+    @item @i{Results are transmitted back to each EBPM node. This is called
+    @sc{transmittion phase 2}.}
+    @item @i{EBPM nodes sets the correctors' set point. This is called @sc{correction phase}.}
+
+@end enumerate
+
+@ref{fig:fofb_controller} illustrates the FOFB cell controller and the EBPM nodes
+relation to it.
+
+@c ==========================================================================
+@node Real-Time Data Distribution and Synchronization Required Funcionalities
+@subsection Required Funcionalities
+
+    In order to allow the system to be implemented, the following requirements
+    are needed fot the FPGA firmware:
+
+@table @r
+
+@item @b{Multi-Gigabit Communication Support}
+
+    In order to achieve high-bandwidth, low-latency data distribution, a multi-gigabit
+    communication over fibre is necessary. The FPGA provides various multi-gigabit
+    tranceivers to allow EBPM nodes to communicate over the microTCA backplane
+    and the same AFC board provides the possibility to drive various SFP
+    connectors through FMC boards. In this way, it enables the AFC board to serve
+    as the FOFB controller, as well.
+
+@item @b{Definition of FOFB Topology (TBD)}
+@item @b{Definition of FOFB Distribution Algorithm (TBD)}
+
+    To transmit position data to all EBPM nodes it is necessary to define how the
+    EBPM nodes are distributed over the machine and how they are connected.
+    @ref{fig:fofb_topology} shows a possible solution to this.
+
+    With the topology and protocols defined, it is possible to implement the distribution
+    algorithm to work with the physical Multi-Gigabit Communication Support.
+
+@end table
+
+@float Figure,fig:fofb_controller
+@center @image{img/fofb_controller, 12cm, , FOFB Controller, png}
+@caption{FOFB Controller}
+@end float
+@sp 1
+
+@c ==========================================================================
+@c @node @mybibnode{}
+@c @chapter References
+@c
+@c @itemize @asis
+@c
+@c @mybibitem{LaTeX2e} Leslie Lamport, LaTeX User's Guide and
+@c Reference Manual, 2nd edition, Addison-Wesley, Reading,
+@c Massachusetts, 1994.
+@c
+@c @end itemize
+
+@c ##########################################################################
+@bye
