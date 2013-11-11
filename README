@@ -1,2 +1,18 @@
 Repository containing the documentation of the BPM
 Firmware Project
+
+==============================================================================
+
+For generating a PDF doc do the following:
+
+	-> Change to spec/ folder
+
+1 - cd spec/
+
+	-> Call the make program. Be advised that you
+	need to have some packages in order to build
+	the document fromt he texinfo sources
+
+2 - make
+
+
